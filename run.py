@@ -96,7 +96,9 @@ class WebSurfer:
         """Получение всех валидных ссылок на странице"""
         try:
             self.driver.get(base_url)
-            time.sleep(1)  # Даем странице время на загрузку
+            WebDriverWait(self.driver, 10).until(
+                lambda d: d.execute_script("return document.readyState === 'complete'")
+            )
 
             links = []
             for element in self.driver.find_elements(By.TAG_NAME, 'a'):
@@ -121,7 +123,7 @@ def main():
     web_surfer = WebSurfer(page_driver, max_pages=15)  # Анализируем до 15 страниц
 
     try:
-        start_url = "https://ya.ru/"  # Можно заменить на любой сайт
+        start_url = "https://tensor.ru/"  # Можно заменить на любой сайт
         print(f"Начинаем анализ сайта: {start_url}")
 
         results = web_surfer.crawl_site(start_url)
