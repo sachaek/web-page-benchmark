@@ -40,8 +40,13 @@ class PageMetrics:
 
 
 def main():
-    page = PageDriver(headless=False)
-    page.driver.get("https://ya.ru/")
+    page_driver = PageDriver(headless=False)
+    page_metrics = PageMetrics(page_driver)
+    page_load_time = page_metrics.measure_load_time("https://ya.ru")
+    if page_load_time > 0:
+        print(f"Страница загрузилась с временем {page_load_time}")
+    else:
+        print("Не удалось загрузить страницу")
 
 
 if __name__ == "__main__":
