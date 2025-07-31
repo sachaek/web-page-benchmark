@@ -16,6 +16,11 @@ class PageDriver:
         self.driver.quit()
 
 
-page = PageDriver(headless=False)
-page.driver.get("https://ya.ru/")
-time.sleep(1)
+def main():
+    page = PageDriver(headless=False)
+    page.driver.get("https://ya.ru/")
+
+
+if __name__ == "__main__":
+    main()
+    time.sleep(1)
