@@ -68,6 +68,7 @@ class PageMetrics:
 class WebSurfer:
     def __init__(self, page_driver: PageDriver, max_pages: int = 10):
         self.driver = page_driver.driver
+        self.page_metrics = PageMetrics(page_driver)  # Инициализируем один раз
         self.visited_urls = set()
         self.max_pages = max_pages
         self.page_times = []
@@ -78,7 +79,7 @@ class WebSurfer:
             return []
 
         print(f"Анализируем: {start_url}")
-        load_time = PageMetrics(PageDriver()).measure_load_time(start_url)
+        load_time = self.page_metrics.measure_load_time(start_url)  # Используем существующий page_metrics
 
         if load_time > 0:
             self.page_times.append((start_url, load_time))
