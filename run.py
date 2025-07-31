@@ -1,21 +1,21 @@
+import time
 from selenium import webdriver
 
-driver = webdriver.Chrome()
-driver.get("https://ya.ru/")
 
 class PageDriver:
-    def __init__(self):
-        self.driver = self._setup_driver()
+    def __init__(self, headless: bool = True):
+        self.driver = self.setup_driver(headless=headless)
 
-    def _setup_driver(self):
+    def setup_driver(self, headless: bool = True):
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
+        if headless:
+            options.add_argument('--headless')
         return webdriver.Chrome(options=options)
 
     def close(self):
         self.driver.quit()
 
 
-page = PageDriver()._setup_driver()
-page.get("https://ya.ru/")
-page.pause()
+page = PageDriver(headless=False)
+page.driver.get("https://ya.ru/")
+time.sleep(1)
