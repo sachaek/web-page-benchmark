@@ -16,6 +16,12 @@ class PageDriver:
         self.driver.quit()
 
 
+class PageMetrics:
+    def __init__(self, page_driver: PageDriver):
+        self.driver = page_driver.driver
+
+
+
 def main():
     page = PageDriver(headless=False)
     page.driver.get("https://ya.ru/")
