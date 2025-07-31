@@ -26,20 +26,41 @@ class PageMetrics:
 
     def measure_load_time(self, url: str) -> float:
         """
-        Замеряет время полной загрузки страницы в секундах
-        Возвращает время загрузки или -1 при ошибке
+        Замеряет время полной загрузки страницы в секундах.
+        Использует Navigation Timing API с fallback на document.readyState.
+        Возвращает время загрузки или -1 при ошибке.
         """
         try:
             start_time = time.time()
             self.driver.get(url)
 
-            # Ожидаем полной загрузки страницы
+            # Пробуем получить метрики через Navigation Timing API
+            load_time = self.driver.execute_script("""
+                // Пробуем современный API
+                const navEntries = performance.getEntriesByType('navigation');
+                if (navEntries.length > 0 && navEntries[0].loadEventEnd > 0) {
+                    return (navEntries[0].loadEventEnd - navEntries[0].startTime) / 1000;
+                }
+
+                // Fallback для старых браузеров
+                if (performance.timing && performance.timing.loadEventEnd > 0) {
+                    return (performance.timing.loadEventEnd - performance.timing.navigationStart) / 1000;
+                }
+
+                // Если API недоступны, возвращаем null для использования системного времени
+                return null;
+            """)
+
+            # Если Navigation API вернул данные, используем их
+            if load_time is not None and load_time > 0:
+                return float(load_time)
+
+            # Fallback: ждем readyState и используем системное время
             WebDriverWait(self.driver, 10).until(
-                lambda d: d.execute_script(
-                    "return document.readyState === 'complete'"
-                )
+                lambda d: d.execute_script("return document.readyState === 'complete'")
             )
             return time.time() - start_time
+
         except Exception as e:
             print(f"Ошибка при замере времени загрузки: {e}")
             return -1
