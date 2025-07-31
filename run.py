@@ -67,58 +67,56 @@ class PageMetrics:
 
 
 class WebSurfer:
-    def __init__(self, page_driver: PageDriver, max_pages: int = 10):
+    def __init__(self, page_driver: PageDriver, max_pages: int = 50):
         self.driver = page_driver.driver
-        self.page_metrics = PageMetrics(page_driver)  # Инициализируем один раз
-        self.visited_urls = set()
+        self.page_metrics = PageMetrics(page_driver)
         self.max_pages = max_pages
-        self.page_times = []
 
-    def crawl_site(self, start_url: str) -> List[Tuple[str, float]]:
-        """Рекурсивный обход сайта и сбор метрик"""
-        if start_url in self.visited_urls or len(self.visited_urls) >= self.max_pages:
+    def analyze_site(self, start_url: str) -> List[Tuple[str, float]]:
+        """Анализирует только ссылки с начальной страницы"""
+        print(f"Получаем ссылки с начальной страницы: {start_url}")
+
+        # Получаем все ссылки с начальной страницы
+        initial_links = self.get_all_links(start_url)
+        if not initial_links:
             return []
 
-        print(f"Анализируем: {start_url}")
-        load_time = self.page_metrics.measure_load_time(start_url)  # Используем существующий page_metrics
+        print(f"Найдено {len(initial_links)} ссылок для анализа")
 
-        if load_time > 0:
-            self.page_times.append((start_url, load_time))
-            self.visited_urls.add(start_url)
+        # Анализируем начальную страницу
+        results = []
+        initial_load_time = self.page_metrics.measure_load_time(start_url)
+        if initial_load_time > 0:
+            results.append((start_url, initial_load_time))
 
-            links = self.get_all_links(start_url)
-            for link in links:
-                if len(self.visited_urls) < self.max_pages and link not in self.visited_urls:
-                    self.crawl_site(link)
+        # Анализируем найденные ссылки (не более max_pages-1, так как начальная уже учтена)
+        for i, url in enumerate(initial_links[:self.max_pages - 1], 1):
+            print(f"Анализ страницы {i}/{min(len(initial_links), self.max_pages - 1)}: {url}")
+            load_time = self.page_metrics.measure_load_time(url)
+            if load_time > 0:
+                results.append((url, load_time))
 
-        return sorted(self.page_times, key=lambda x: x[1], reverse=True)
+        return sorted(results, key=lambda x: x[1], reverse=True)
 
     def get_all_links(self, base_url: str) -> List[str]:
-        """Получение всех валидных ссылок на странице"""
+        """Получение всех уникальных ссылок на странице"""
         try:
             self.driver.get(base_url)
             WebDriverWait(self.driver, 10).until(
                 lambda d: d.execute_script("return document.readyState === 'complete'")
             )
 
-            links = []
+            links = set()
             for element in self.driver.find_elements(By.TAG_NAME, 'a'):
                 href = element.get_attribute('href')
-                if href and self._is_valid_url(href):
-                    links.append(href)
-            print(f"Найдено ссылок в DOM: {len(links)}")
-            return links
+                if href and href.startswith(('http://', 'https://')):
+                    links.add(href)
 
+            print(f"Найдено уникальных ссылок: {len(links)}")
+            return list(links)
         except Exception as e:
             print(f"Ошибка при получении ссылок: {e}")
             return []
-
-    def _is_valid_url(self, url: str) -> bool:
-        if not (url.startswith('http://') or url.startswith('https://')):
-            return False
-        if url in self.visited_urls:
-            return False
-        return True
 
 
 def main():
@@ -150,7 +148,7 @@ def main():
         print(f"Начинаем анализ сайта: {start_url}")
         print(f"Максимальное количество страниц для анализа: {max_pages}")
 
-        results = web_surfer.crawl_site(start_url)
+        results = web_surfer.analyze_site(start_url)
 
         print("\nТоп страниц по времени загрузки (от самых медленных):")
         for i, (url, load_time) in enumerate(results, 1):
