@@ -3,6 +3,7 @@ from typing import List, Tuple
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
+import sys
 
 
 class PageDriver:
@@ -105,7 +106,9 @@ class WebSurfer:
                 href = element.get_attribute('href')
                 if href and self._is_valid_url(href):
                     links.append(href)
+            print(f"Найдено ссылок в DOM: {len(links)}")
             return links
+
         except Exception as e:
             print(f"Ошибка при получении ссылок: {e}")
             return []
@@ -119,12 +122,33 @@ class WebSurfer:
 
 
 def main():
+    # Параметры по умолчанию
+    default_url = "https://tensor.ru/"
+    default_max_pages = 50
+
+    # Обработка аргументов командной строки
+    if len(sys.argv) > 1:
+        start_url = sys.argv[1]
+        if not start_url.startswith(('http://', 'https://')):
+            start_url = 'https://' + start_url
+    else:
+        start_url = default_url
+
+    if len(sys.argv) > 2:
+        try:
+            max_pages = int(sys.argv[2])
+        except ValueError:
+            print("Ошибка: max_pages должен быть числом. Используется значение по умолчанию 50")
+            max_pages = default_max_pages
+    else:
+        max_pages = default_max_pages
+
     page_driver = PageDriver(headless=False)
-    web_surfer = WebSurfer(page_driver, max_pages=15)  # Анализируем до 15 страниц
+    web_surfer = WebSurfer(page_driver, max_pages=max_pages)
 
     try:
-        start_url = "https://tensor.ru/"  # Можно заменить на любой сайт
         print(f"Начинаем анализ сайта: {start_url}")
+        print(f"Максимальное количество страниц для анализа: {max_pages}")
 
         results = web_surfer.crawl_site(start_url)
 
