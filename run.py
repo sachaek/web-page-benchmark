@@ -1,6 +1,5 @@
 import time
-from typing import List
-
+from typing import List, Tuple
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -67,9 +66,30 @@ class PageMetrics:
 
 
 class WebSurfer:
-    def __init__(self, page_driver: PageDriver):
+    def __init__(self, page_driver: PageDriver, max_pages: int = 10):
         self.driver = page_driver.driver
-        self.checked_urls = set()
+        self.visited_urls = set()
+        self.max_pages = max_pages
+        self.page_times = []
+
+    def crawl_site(self, start_url: str) -> List[Tuple[str, float]]:
+        """Рекурсивный обход сайта и сбор метрик"""
+        if start_url in self.visited_urls or len(self.visited_urls) >= self.max_pages:
+            return []
+
+        print(f"Анализируем: {start_url}")
+        load_time = PageMetrics(PageDriver()).measure_load_time(start_url)
+
+        if load_time > 0:
+            self.page_times.append((start_url, load_time))
+            self.visited_urls.add(start_url)
+
+            links = self.get_all_links(start_url)
+            for link in links:
+                if len(self.visited_urls) < self.max_pages and link not in self.visited_urls:
+                    self.crawl_site(link)
+
+        return sorted(self.page_times, key=lambda x: x[1], reverse=True)
 
     def get_all_links(self, base_url: str) -> List[str]:
         """Получение всех валидных ссылок на странице"""
@@ -88,31 +108,26 @@ class WebSurfer:
             return []
 
     def _is_valid_url(self, url: str) -> bool:
-        if not (url.startswith('http://') or url.startswith('https://')):  # Проверяем, что URL начинается с http/https
+        if not (url.startswith('http://') or url.startswith('https://')):
             return False
-        if url in self.checked_urls:  # Проверяем, что URL еще не посещали
+        if url in self.visited_urls:
             return False
         return True
 
 
 def main():
     page_driver = PageDriver(headless=False)
-    page_metrics = PageMetrics(page_driver)
-    web_surfer = WebSurfer(page_driver)
+    web_surfer = WebSurfer(page_driver, max_pages=15)  # Анализируем до 15 страниц
 
     try:
-        url = "https://ya.ru"
-        page_load_time = page_metrics.measure_load_time(url)
+        start_url = "https://ya.ru/"  # Можно заменить на любой сайт
+        print(f"Начинаем анализ сайта: {start_url}")
 
-        if page_load_time > -1:
-            print(f"Страница загрузилась за {page_load_time:.2f} сек")
+        results = web_surfer.crawl_site(start_url)
 
-            links = web_surfer.get_all_links(url)  # Получаем ссылки
-            print(f"\nНайдено ссылок: {len(links)}")
-            for i, link in enumerate(links[:5], 1):  # Показываем первые 5 ссылок
-                print(f"{i}. {link}")
-        else:
-            print("Не удалось загрузить страницу")
+        print("\nТоп страниц по времени загрузки (от самых медленных):")
+        for i, (url, load_time) in enumerate(results, 1):
+            print(f"{i}. {url} - {load_time:.2f} сек")
 
     finally:
         page_driver.close()
@@ -120,4 +135,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    time.sleep(1)
