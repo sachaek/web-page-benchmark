@@ -20,6 +20,23 @@ class PageMetrics:
     def __init__(self, page_driver: PageDriver):
         self.driver = page_driver.driver
 
+    def measure_load_time(self, url: str) -> float:
+        """
+        Замеряет время полной загрузки страницы в секундах
+        Возвращает время загрузки или -1 при ошибке
+        Navigation Timing API
+        """
+        try:
+            self.driver.get(url)
+
+            load_time = self.driver.execute_script(
+                "return (window.performance.timing.loadEventEnd - "
+                "window.performance.timing.navigationStart) / 1000"
+            )
+            return float(load_time)
+        except Exception as e:
+            print(f"Ошибка при замере времени загрузки: {e}")
+            return -1
 
 
 def main():
